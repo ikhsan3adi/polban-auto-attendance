@@ -1,0 +1,23 @@
+name: Auto Absen
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5' # Mon-Fri at 07:00 WIB (00:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  absen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run index.ts
+        env:
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
