@@ -1,0 +1,25 @@
+{
+  "name": "absen-mhs-polban-otomatis",
+  "author": {
+    "name": "Ikhsan Satriadi",
+    "email": "ikhsansatriadi175@gmail.com",
+    "url": "https://ikhsan3adi.is-a.dev"
+  },
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun ./index.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.8.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/jsdom": "^27.0.0",
+    "jsdom": "^28.0.0"
+  }
+}
