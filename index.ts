@@ -6,16 +6,16 @@ interface LoginCredential {
 }
 
 interface JadwalKehadiran {
-  kodeDosen?: string
-  dosen?: string
-  kodeMataKuliah?: string
-  mataKuliah?: string
-  tp?: 'T' | 'P'
-  jamAwal?: number
-  jamAkhir?: number
-  jamPerkuliahan?: string
-  kehadiran?: string
-  kelas?: string
+  kodeDosen: string
+  dosen: string
+  kodeMataKuliah: string
+  mataKuliah: string
+  tp: 'T' | 'P'
+  jamAwal: number
+  jamAkhir: number
+  jamPerkuliahan: string
+  kehadiran: string
+  kelas: string
 }
 
 const userAgent =
@@ -57,6 +57,11 @@ async function getSessionCookies(
 
     if (response.status !== 302 && !response.ok) {
       throw new Error(`Login failed! status: ${response.status}`)
+    }
+
+    const refresh = response.headers.get('Refresh')
+    if (!refresh || !refresh.includes('/Mhs')) {
+      throw new Error('Login failed: invalid credentials')
     }
 
     const cookie = response.headers.get('Set-Cookie')
@@ -130,16 +135,16 @@ async function scrapeJadwalKehadiranTable(
       const dosen = (rowData.get('Dosen:') as string).split('-')
 
       const jadwalKehadiran: JadwalKehadiran = {
-        kodeDosen: dosen[0],
-        dosen: dosen[1],
-        kodeMataKuliah: rowData.get('Kode MK:') as string,
-        mataKuliah: rowData.get('Nama MK:') as string,
-        tp: rowData.get('Teori/Praktek:') as 'T' | 'P',
-        jamAwal: Number(rowData.get('Awal Jam Ke:')),
-        jamAkhir: Number(rowData.get('Akhir Jam Ke:')),
-        jamPerkuliahan: rowData.get('Jam Perkuliahan:') as string,
-        kehadiran: rowData.get('Kehadiran:') as string,
-        kelas: kls!,
+        kodeDosen: dosen[0] ?? '',
+        dosen: dosen[1] ?? '',
+        kodeMataKuliah: (rowData.get('Kode MK:') as string) ?? '',
+        mataKuliah: (rowData.get('Nama MK:') as string) ?? '',
+        tp: (rowData.get('Teori/Praktek:') as 'T' | 'P') ?? 'T',
+        jamAwal: Number(rowData.get('Awal Jam Ke:')) || 0,
+        jamAkhir: Number(rowData.get('Akhir Jam Ke:')) || 0,
+        jamPerkuliahan: (rowData.get('Jam Perkuliahan:') as string) ?? '',
+        kehadiran: (rowData.get('Kehadiran:') as string) ?? '',
+        kelas: kls ?? '',
       }
 
       daftarJadwalKehadiran.push(jadwalKehadiran)
@@ -164,12 +169,12 @@ async function simpanAwal(
     )
 
     const data = {
-      ja: jadwalKehadiran.jamAwal!.toString(),
-      jb: jadwalKehadiran.jamAkhir!.toString(),
-      mk: jadwalKehadiran.kodeMataKuliah!,
-      dsn: jadwalKehadiran.kodeDosen!,
-      tp: jadwalKehadiran.tp!,
-      kls: jadwalKehadiran.kelas!,
+      ja: jadwalKehadiran.jamAwal.toString(),
+      jb: jadwalKehadiran.jamAkhir.toString(),
+      mk: jadwalKehadiran.kodeMataKuliah,
+      dsn: jadwalKehadiran.kodeDosen,
+      tp: jadwalKehadiran.tp,
+      kls: jadwalKehadiran.kelas,
     }
 
     const body = new URLSearchParams(data)
