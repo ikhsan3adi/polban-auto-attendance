@@ -1,4 +1,4 @@
-# absen-mhs-polban-otomatis
+# polban-auto-attendance
 
 Automated attendance submission for POLBAN students via `akademik.polban.ac.id`.
 
