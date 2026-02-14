@@ -120,8 +120,8 @@ async function scrapeJadwalKehadiranTable(
             ?.replace(/&nbsp;/g, '')
             .trim()
 
-          let content
-          if (links.length > 0) {
+          let content: string
+          if (links.length > 0 && links[0]) {
             content = links[0]?.textContent.replace(/&nbsp;/g, '').trim()
           } else {
             content = cell.innerHTML.replace(/&nbsp;/g, '').trim()
@@ -132,19 +132,19 @@ async function scrapeJadwalKehadiranTable(
         }),
       )
 
-      const dosen = (rowData.get('Dosen:') as string).split('-')
+      const dosen = rowData.get('Dosen:')?.split('-')
 
       const jadwalKehadiran: JadwalKehadiran = {
-        kodeDosen: dosen[0] ?? '',
-        dosen: dosen[1] ?? '',
-        kodeMataKuliah: (rowData.get('Kode MK:') as string) ?? '',
-        mataKuliah: (rowData.get('Nama MK:') as string) ?? '',
-        tp: (rowData.get('Teori/Praktek:') as 'T' | 'P') ?? 'T',
-        jamAwal: Number(rowData.get('Awal Jam Ke:')) || 0,
-        jamAkhir: Number(rowData.get('Akhir Jam Ke:')) || 0,
-        jamPerkuliahan: (rowData.get('Jam Perkuliahan:') as string) ?? '',
-        kehadiran: (rowData.get('Kehadiran:') as string) ?? '',
-        kelas: kls ?? '',
+        kodeDosen: dosen?.at(0) ?? '?',
+        dosen: dosen?.at(1) ?? '?',
+        kodeMataKuliah: rowData.get('Kode MK:') ?? '?',
+        mataKuliah: rowData.get('Nama MK:') ?? '?',
+        tp: (rowData.get('Teori/Praktek:') as 'T' | 'P') ?? '?',
+        jamAwal: Number(rowData.get('Awal Jam Ke:') ?? '-1'),
+        jamAkhir: Number(rowData.get('Akhir Jam Ke:') ?? '-1'),
+        jamPerkuliahan: rowData.get('Jam Perkuliahan:') ?? '?',
+        kehadiran: rowData.get('Kehadiran:') ?? '?',
+        kelas: kls ?? '?',
       }
 
       daftarJadwalKehadiran.push(jadwalKehadiran)
@@ -207,20 +207,15 @@ const cookieString = await getSessionCookies({ username, password })
 
 const session = cookieString.split('; ')[0]!
 
-const daftarJadwalKehadiran = await scrapeJadwalKehadiranTable(
-  session,
-  '#jadwal',
-)
+const daftarJadwal = await scrapeJadwalKehadiranTable(session, '#jadwal')
 
-const belumHadir = daftarJadwalKehadiran.filter(
-  (jadwal) => jadwal.kehadiran !== 'Hadir',
-)
+const belumHadir = daftarJadwal.filter((j) => j.kehadiran !== 'Hadir')
 
 let hasFailure = false
 
 if (belumHadir.length > 0) {
   const results = await Promise.allSettled(
-    belumHadir.map((jadwal) => simpanAwal(session, jadwal)),
+    belumHadir.map((j) => simpanAwal(session, j)),
   )
 
   const succeeded = results.filter((r) => r.status === 'fulfilled')
@@ -238,13 +233,15 @@ if (belumHadir.length > 0) {
 
 const verification = await scrapeJadwalKehadiranTable(session, '#jadwal')
 
-console.table(
-  verification.map((j) => ({
-    Dosen: `(${j.kodeDosen}) ${j.dosen}`,
-    'Mata Kuliah': `(${j.kodeMataKuliah}) ${j.mataKuliah} (${j.tp})`,
-    Jam: j.jamPerkuliahan,
-    Kehadiran: j.kehadiran,
-  })),
-)
+if (verification.length > 0) {
+  console.table(
+    verification.map((j) => ({
+      Dosen: `(${j.kodeDosen}) ${j.dosen}`,
+      'Mata Kuliah': `(${j.kodeMataKuliah}) ${j.mataKuliah} (${j.tp})`,
+      Jam: j.jamPerkuliahan,
+      Kehadiran: j.kehadiran,
+    })),
+  )
+}
 
 if (hasFailure) process.exit(1)
