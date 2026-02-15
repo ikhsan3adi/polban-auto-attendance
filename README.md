@@ -5,9 +5,10 @@ Automated attendance submission for POLBAN students on `akademik.polban.ac.id`.
 ## How It Works
 
 1. Login to akademik portal using NIM & password to get session cookie
-2. Scrape today's schedule from the attendance page
+2. Scrape today's schedule from the attendance page (normal + kuliah pengganti)
 3. Submit attendance for courses not yet marked "Hadir"
 4. Re-scrape and print a verification table
+5. Send a summary report via Telegram (optional)
 
 ## Setup (for development or local usage)
 
@@ -15,21 +16,28 @@ Automated attendance submission for POLBAN students on `akademik.polban.ac.id`.
 bun install
 ```
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
+Fill in `.env`:
+
 ```sh
-USERNAME=24xxxxxxx # your NIM
-PASSWORD=yourpassword
+USERNAME=24xxxxxxx        # MANDATORY, your NIM
+PASSWORD=yourpassword     # MANDATORY
+
+KULIAH_PENGGANTI=true     # optional, also process replacement lectures (default: true)
+
+TELEGRAM_BOT_TOKEN=       # optional, from @BotFather
+TELEGRAM_CHAT_ID=         # optional, from @userinfobot
 ```
 
 ## Usage
 
 ```bash
-bun run index.ts
+bun start
 ```
 
 ## Scheduled GitHub Actions
@@ -40,13 +48,17 @@ To set it up:
 
 1. Push/Fork this repo to GitHub
 2. Go to **Settings > Secrets and variables > Actions**
-3. Add repository secrets: `USERNAME` and `PASSWORD`
-4. The workflow also supports manual trigger via the **Actions** tab
+3. Add secrets: `USERNAME`, `PASSWORD`
+4. (Optional) Add secrets: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+5. (Optional) Add variable: `KULIAH_PENGGANTI`
+
+> Manual trigger available via **Actions** tab
 
 ## Tech Stack
 
-- [Bun](https://bun.sh) - Runtime
-- [jsdom](https://github.com/jsdom/jsdom) - HTML parsing
+- [Bun](https://bun.sh) -- Runtime
+- [jsdom](https://github.com/jsdom/jsdom) -- HTML parsing
+- [Telegram Bot API](https://core.telegram.org/bots/api) -- Notifications
 
 ## Disclaimer
 

@@ -1,4 +1,5 @@
 import { JSDOM } from 'jsdom'
+import { buildReportMessage, sendTelegramMessage } from './telegram'
 
 interface LoginCredential {
   username: string
@@ -269,5 +270,16 @@ if (verification.length > 0) {
     })),
   )
 }
+
+const report = buildReportMessage({
+  mode: absenPengganti
+    ? 'Kuliah Normal + Kuliah Pengganti'
+    : 'Kuliah Normal Only',
+  submitted: belumHadir.length,
+  hasFailure,
+  jadwal: verification,
+})
+
+await sendTelegramMessage(report)
 
 if (hasFailure) process.exit(1)
