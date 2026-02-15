@@ -21,3 +21,4 @@ jobs:
         env:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
+          KULIAH_PENGGANTI: ${{ vars.KULIAH_PENGGANTI }}

@@ -16,15 +16,18 @@ interface JadwalKehadiran {
   jamPerkuliahan: string
   kehadiran: string
   kelas: string
+  kuliahPengganti: boolean
 }
 
 const userAgent =
   'Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0'
 
+const baseUrl = 'https://akademik.polban.ac.id'
+
 async function getSessionCookies(
   credentials: LoginCredential,
 ): Promise<string> {
-  const urlLogin = 'https://akademik.polban.ac.id/laman/login'
+  const urlLogin = `${baseUrl}/laman/login`
 
   try {
     console.info(`Login & get session cookie: ${urlLogin}`)
@@ -50,7 +53,7 @@ async function getSessionCookies(
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': userAgent,
         Referer: urlLogin,
-        Origin: 'https://akademik.polban.ac.id',
+        Origin: baseUrl,
         Cookie: initSession,
       },
     })
@@ -78,8 +81,9 @@ async function getSessionCookies(
 async function scrapeJadwalKehadiranTable(
   session: string,
   tableSelector: string,
+  kuliahPengganti = false,
 ): Promise<JadwalKehadiran[]> {
-  const urlAbsen = 'https://akademik.polban.ac.id/ajar/absen'
+  const urlAbsen = `${baseUrl}/ajar/${kuliahPengganti ? 'absen_ganti' : 'absen'}`
 
   try {
     console.info(`Scraping jadwal + kehadiran table from: ${urlAbsen}`)
@@ -145,6 +149,7 @@ async function scrapeJadwalKehadiranTable(
         jamPerkuliahan: rowData.get('Jam Perkuliahan:') ?? '?',
         kehadiran: rowData.get('Kehadiran:') ?? '?',
         kelas: kls ?? '?',
+        kuliahPengganti,
       }
 
       daftarJadwalKehadiran.push(jadwalKehadiran)
@@ -161,7 +166,8 @@ async function simpanAwal(
   session: string,
   jadwalKehadiran: JadwalKehadiran,
 ): Promise<void> {
-  const urlSimpanAwal = 'https://akademik.polban.ac.id/ajar/absen/absensi_awal'
+  const absenPath = jadwalKehadiran.kuliahPengganti ? 'absen_ganti' : 'absen'
+  const urlSimpanAwal = `${baseUrl}/ajar/${absenPath}/absensi_awal`
 
   try {
     console.info(
@@ -197,6 +203,7 @@ async function simpanAwal(
 
 const username = Bun.env.USERNAME
 const password = Bun.env.PASSWORD
+const absenPengganti = (Bun.env.KULIAH_PENGGANTI ?? 'true') === 'true'
 
 if (!username || !password) {
   console.error('USERNAME and PASSWORD env variables are required')
@@ -208,6 +215,15 @@ const cookieString = await getSessionCookies({ username, password })
 const session = cookieString.split('; ')[0]!
 
 const daftarJadwal = await scrapeJadwalKehadiranTable(session, '#jadwal')
+
+if (absenPengganti) {
+  const jadwalPengganti = await scrapeJadwalKehadiranTable(
+    session,
+    '#jadwal',
+    true,
+  )
+  daftarJadwal.push(...jadwalPengganti)
+}
 
 const belumHadir = daftarJadwal.filter((j) => j.kehadiran !== 'Hadir')
 
@@ -233,6 +249,15 @@ if (belumHadir.length > 0) {
 
 const verification = await scrapeJadwalKehadiranTable(session, '#jadwal')
 
+if (absenPengganti) {
+  const verifikasiPengganti = await scrapeJadwalKehadiranTable(
+    session,
+    '#jadwal',
+    true,
+  )
+  verification.push(...verifikasiPengganti)
+}
+
 if (verification.length > 0) {
   console.table(
     verification.map((j) => ({
@@ -240,6 +265,7 @@ if (verification.length > 0) {
       'Mata Kuliah': `(${j.kodeMataKuliah}) ${j.mataKuliah} (${j.tp})`,
       Jam: j.jamPerkuliahan,
       Kehadiran: j.kehadiran,
+      Pengganti: j.kuliahPengganti,
     })),
   )
 }
