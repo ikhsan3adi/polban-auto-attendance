@@ -11,6 +11,7 @@ interface JadwalReport {
 
 interface AbsenReport {
   mode: string
+  trigger: string
   submitted: number
   hasFailure: boolean
   jadwal: JadwalReport[]
@@ -27,7 +28,8 @@ export function buildReportMessage(report: AbsenReport): string {
   const lines: string[] = [
     '\u{1F4CA} <b>Auto Absen Report</b>\n',
     `\u{1F4C5} ${date}`,
-    `\u{2699}\u{FE0F} Mode: ${report.mode}\n`,
+    `\u{2699}\u{FE0F} Mode: ${report.mode}`,
+    `\u{1F680} Trigger: ${report.trigger}\n`,
   ]
 
   if (report.submitted > 0) {

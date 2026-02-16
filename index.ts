@@ -271,10 +271,16 @@ if (verification.length > 0) {
   )
 }
 
+const githubEvent = Bun.env.GITHUB_EVENT_NAME
+let trigger = 'Manual (Terminal)'
+if (githubEvent === 'schedule') trigger = 'Scheduled Workflow'
+if (githubEvent === 'workflow_dispatch') trigger = 'Manual Workflow'
+
 const report = buildReportMessage({
   mode: absenPengganti
     ? 'Kuliah Normal + Kuliah Pengganti'
     : 'Kuliah Normal Only',
+  trigger,
   submitted: belumHadir.length,
   hasFailure,
   jadwal: verification,
