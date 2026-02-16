@@ -272,9 +272,9 @@ if (verification.length > 0) {
 }
 
 const githubEvent = Bun.env.GITHUB_EVENT_NAME
-let trigger = 'Manual (Terminal)'
+let trigger = 'Manual'
 if (githubEvent === 'schedule') trigger = 'Scheduled Workflow'
-if (githubEvent === 'workflow_dispatch') trigger = 'Manual Workflow'
+if (githubEvent === 'workflow_dispatch') trigger = 'Workflow Dispatch'
 
 const report = buildReportMessage({
   mode: absenPengganti
