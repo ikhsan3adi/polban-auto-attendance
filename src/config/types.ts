@@ -17,19 +17,10 @@ export interface JadwalKehadiran {
   kuliahPengganti: boolean
 }
 
-export interface JadwalReport {
-  mataKuliah: string
-  tp: string
-  dosen: string
-  jamPerkuliahan: string
-  kehadiran: string
-  kuliahPengganti: boolean
-}
-
 export interface AbsenReport {
   mode: string
   trigger: string
   submitted: number
   hasFailure: boolean
-  jadwal: JadwalReport[]
+  jadwal: JadwalKehadiran[]
 }

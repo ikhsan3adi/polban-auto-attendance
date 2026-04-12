@@ -1,4 +1,4 @@
-import type { LoginCredential } from './types'
+import type { LoginCredential } from '../config/types'
 
 export class ValidationError extends Error {
   constructor(message: string) {
