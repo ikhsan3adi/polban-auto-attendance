@@ -1,21 +1,5 @@
-const TELEGRAM_API = 'https://api.telegram.org'
-
-interface JadwalReport {
-  mataKuliah: string
-  tp: string
-  dosen: string
-  jamPerkuliahan: string
-  kehadiran: string
-  kuliahPengganti: boolean
-}
-
-interface AbsenReport {
-  mode: string
-  trigger: string
-  submitted: number
-  hasFailure: boolean
-  jadwal: JadwalReport[]
-}
+import { KEHADIRAN_STATUS, TELEGRAM_API } from './constants'
+import type { AbsenReport } from './types'
 
 export function buildReportMessage(report: AbsenReport): string {
   const date = new Date().toLocaleDateString('id-ID', {
@@ -26,7 +10,7 @@ export function buildReportMessage(report: AbsenReport): string {
   })
 
   const lines: string[] = [
-    '\u{1F4CA} <b>Auto Absen Report</b>\n',
+    '\u{1F4CA} <b>Auto Attendance Report</b>\n',
     `\u{1F4C5} ${date}`,
     `\u{2699}\u{FE0F} Mode: ${report.mode}`,
     `\u{1F680} Trigger: ${report.trigger}\n`,
@@ -40,9 +24,16 @@ export function buildReportMessage(report: AbsenReport): string {
   }
 
   if (report.jadwal.length > 0) {
-    lines.push('', '\u{1F4DD} <b>Jadwal Hari Ini</b>')
+    lines.push('', '\u{1F4DD} <b>Today Schedule</b>')
     for (const j of report.jadwal) {
-      const icon = j.kehadiran === 'Hadir' ? '\u{2705}' : '\u{274C}'
+      let icon = '\u{274C}'
+
+      if (j.kehadiran === KEHADIRAN_STATUS.HADIR_NEW) {
+        icon = '\u{2705} \u{1F195}'
+      } else if (j.kehadiran === KEHADIRAN_STATUS.HADIR) {
+        icon = '\u{2705}'
+      }
+
       const tag = j.kuliahPengganti ? ' \u{1F504}' : ''
       lines.push(
         `<b>${j.mataKuliah}</b> (${j.tp})${tag}`,
@@ -60,7 +51,12 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   const token = Bun.env.TELEGRAM_BOT_TOKEN
   const chatId = Bun.env.TELEGRAM_CHAT_ID
 
-  if (!token || !chatId) return
+  if (!token || !chatId) {
+    console.info(
+      'Telegram notification skipped: missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID',
+    )
+    return
+  }
 
   try {
     const response = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
@@ -76,6 +72,8 @@ export async function sendTelegramMessage(text: string): Promise<void> {
     if (!response.ok) {
       const body = await response.text()
       console.error(`Telegram send failed (${response.status}): ${body}`)
+    } else {
+      console.info(`Telegram message sent successfully to chat ${chatId}`)
     }
   } catch (error) {
     console.error('Telegram notification error:', error)

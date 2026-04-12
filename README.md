@@ -7,7 +7,7 @@ Automated attendance submission for POLBAN students on `akademik.polban.ac.id`.
 1. Login to akademik portal using NIM & password to get session cookie
 2. Scrape today's schedule from the attendance page (normal + kuliah pengganti)
 3. Submit attendance for courses not yet marked "Hadir"
-4. Re-scrape and print a verification table
+4. Print a verification table with updated attendance status
 5. Send a summary report via Telegram (optional)
 
 ## Setup (for development or local usage)
@@ -60,15 +60,19 @@ To set it up:
 - [jsdom](https://github.com/jsdom/jsdom) -- HTML parsing
 - [Telegram Bot API](https://core.telegram.org/bots/api) -- Notifications
 
-## Disclaimer
-
+> [!CAUTION]
+>
+> ## Disclaimer
+>
 > **USE AT YOUR OWN RISK**. This tool is for educational purposes only.
-
-Risks of using this tool include, but are not limited to:
-
-- **Absen tanpa hadir fisik** -- Dosen dapat mengecek kehadiran secara manual (absen panggil, dll). Jika tercatat "Hadir" di sistem tapi tidak hadir di kelas, kamu bisa langsung ketahuan.
-- **Pola absen tidak wajar** -- Absen otomatis tepat jam 07:00 setiap hari bisa terlihat mencurigakan di log server, terutama jika dosen atau admin memeriksa timestamp kehadiran.
-- **Sanksi akademik** -- Pemalsuan kehadiran termasuk pelanggaran akademik yang dapat berakibat teguran, pengurangan nilai, hingga skorsing sesuai peraturan POLBAN.
-- **Perubahan sistem** -- Website akademik dapat berubah sewaktu-waktu tanpa pemberitahuan, menyebabkan script gagal atau berperilaku tidak terduga.
-
-**Penulis/Developer tidak bertanggung jawab atas segala konsekuensi yang timbul dari penggunaan tool ini.**
+>
+> Risks of using this tool include, but are not limited to:
+>
+> - **Absen tanpa hadir fisik** -- Dosen dapat mengecek kehadiran secara manual (absen panggil, dll). Jika tercatat "Hadir" di sistem tapi tidak hadir di kelas, kamu bisa langsung ketahuan.
+> - **Pola absen tidak wajar** -- Absen otomatis tepat jam 07:00 WIB\* setiap hari bisa terlihat mencurigakan di log server, terutama jika dosen atau admin memeriksa timestamp kehadiran.
+> - **Sanksi akademik** -- Pemalsuan kehadiran termasuk pelanggaran akademik yang dapat berakibat teguran, pengurangan nilai, hingga skorsing sesuai peraturan POLBAN.
+> - **Perubahan sistem** -- Website akademik dapat berubah sewaktu-waktu tanpa pemberitahuan, menyebabkan script gagal atau berperilaku tidak terduga.
+>
+> **Penulis/Developer tidak bertanggung jawab atas segala konsekuensi yang timbul dari penggunaan tool ini.**
+>
+> _\*Perlu diperhatikan bahwa jika Anda menggunakan GitHub Actions, skrip tidak akan dieksekusi secara tepat pada 07:00 WIB, tetapi sekitar 08:30-09:10 WIB karena antrian GitHub Action pada 00:00 UTC (07:00 WIB). Antrian panjang dapat menyebabkan skrip tidak dieksekusi pada waktu yang diinginkan._

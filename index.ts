@@ -1,80 +1,74 @@
 import { JSDOM } from 'jsdom'
+import {
+  BASE_URL,
+  ENDPOINTS,
+  HTTP_STATUS,
+  KEHADIRAN_STATUS,
+  REFRESH_SUCCESS_INDICATOR,
+  SELECTORS,
+  USER_AGENT,
+} from './constants'
+import { RateLimiter } from './rateLimiter'
 import { buildReportMessage, sendTelegramMessage } from './telegram'
+import type { JadwalKehadiran, LoginCredential } from './types'
+import { sanitizeForLogging, validateCredentials } from './validation'
 
-interface LoginCredential {
-  username: string
-  password: string
-}
-
-interface JadwalKehadiran {
-  kodeDosen: string
-  dosen: string
-  kodeMataKuliah: string
-  mataKuliah: string
-  tp: 'T' | 'P'
-  jamAwal: number
-  jamAkhir: number
-  jamPerkuliahan: string
-  kehadiran: string
-  kelas: string
-  kuliahPengganti: boolean
-}
-
-const userAgent =
-  'Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0'
-
-const baseUrl = 'https://akademik.polban.ac.id'
+const rateLimiter = new RateLimiter(2)
 
 async function getSessionCookies(
   credentials: LoginCredential,
 ): Promise<string> {
-  const urlLogin = `${baseUrl}/laman/login`
+  const urlLogin = `${BASE_URL}${ENDPOINTS.LOGIN}`
 
   try {
     console.info(`Login & get session cookie: ${urlLogin}`)
+    await rateLimiter.throttle()
 
     const initResponse = await fetch(urlLogin, {
-      headers: { 'User-Agent': userAgent },
+      headers: { 'User-Agent': USER_AGENT },
     })
 
     const initCookie = initResponse.headers.get('Set-Cookie')
     if (!initCookie) throw new Error('Initial Set-Cookie Not Found!')
 
-    const initSession = initCookie.split(';')[0]!
+    const initSession = initCookie.split(';')[0]
+    if (!initSession) throw new Error('Failed to extract initial session')
 
     const body = new URLSearchParams()
     body.append('username', credentials.username)
     body.append('password', credentials.password)
     body.append('submit', 'Sign In')
 
+    await rateLimiter.throttle()
     const response = await fetch(urlLogin, {
       method: 'POST',
       body: body,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': userAgent,
+        'User-Agent': USER_AGENT,
         Referer: urlLogin,
-        Origin: baseUrl,
+        Origin: BASE_URL,
         Cookie: initSession,
       },
     })
 
-    if (response.status !== 302 && !response.ok) {
+    if (response.status !== HTTP_STATUS.REDIRECT && !response.ok) {
       throw new Error(`Login failed! status: ${response.status}`)
     }
 
     const refresh = response.headers.get('Refresh')
-    if (!refresh || !refresh.includes('/Mhs')) {
+    if (!refresh || !refresh.includes(REFRESH_SUCCESS_INDICATOR)) {
       throw new Error('Login failed: invalid credentials')
     }
 
     const cookie = response.headers.get('Set-Cookie')
 
-    if (cookie) return cookie
-
-    return initCookie
+    return cookie || initCookie
   } catch (error) {
-    console.error('Error occurred:', error)
+    console.error(
+      'Login error:',
+      error instanceof Error ? error.message : 'Unknown error',
+    )
     process.exit(1)
   }
 }
@@ -84,15 +78,19 @@ async function scrapeJadwalKehadiranTable(
   tableSelector: string,
   kuliahPengganti = false,
 ): Promise<JadwalKehadiran[]> {
-  const urlAbsen = `${baseUrl}/ajar/${kuliahPengganti ? 'absen_ganti' : 'absen'}`
+  const absenPath = kuliahPengganti
+    ? ENDPOINTS.ABSEN_PENGGANTI
+    : ENDPOINTS.ABSEN
+  const urlAbsen = `${BASE_URL}${absenPath}`
 
   try {
-    console.info(`Scraping jadwal + kehadiran table from: ${urlAbsen}`)
+    console.info(`Scraping schedule + attendance table from: ${urlAbsen}`)
+    await rateLimiter.throttle()
 
     const response = await fetch(urlAbsen, {
       headers: {
         Cookie: session,
-        'User-Agent': userAgent,
+        'User-Agent': USER_AGENT,
       },
     })
 
@@ -111,7 +109,9 @@ async function scrapeJadwalKehadiranTable(
 
     const daftarJadwalKehadiran: JadwalKehadiran[] = []
 
-    const kls = table.querySelector('#kls')?.getAttribute('value')
+    const kls = table
+      .querySelector(SELECTORS.KELAS_INPUT)
+      ?.getAttribute('value')
 
     const rows = table.querySelectorAll('tbody > tr')
     rows.forEach((row) => {
@@ -140,16 +140,16 @@ async function scrapeJadwalKehadiranTable(
       const dosen = rowData.get('Dosen:')?.split('-')
 
       const jadwalKehadiran: JadwalKehadiran = {
-        kodeDosen: dosen?.at(0) ?? '?',
-        dosen: dosen?.at(1) ?? '?',
-        kodeMataKuliah: rowData.get('Kode MK:') ?? '?',
-        mataKuliah: rowData.get('Nama MK:') ?? '?',
-        tp: (rowData.get('Teori/Praktek:') as 'T' | 'P') ?? '?',
+        kodeDosen: dosen?.[0]?.trim() ?? '?',
+        dosen: dosen?.[1]?.trim() ?? '?',
+        kodeMataKuliah: rowData.get('Kode MK:')?.trim() ?? '?',
+        mataKuliah: rowData.get('Nama MK:')?.trim() ?? '?',
+        tp: (rowData.get('Teori/Praktek:')?.trim() as 'T' | 'P') ?? '?',
         jamAwal: Number(rowData.get('Awal Jam Ke:') ?? '-1'),
         jamAkhir: Number(rowData.get('Akhir Jam Ke:') ?? '-1'),
-        jamPerkuliahan: rowData.get('Jam Perkuliahan:') ?? '?',
-        kehadiran: rowData.get('Kehadiran:') ?? '?',
-        kelas: kls ?? '?',
+        jamPerkuliahan: rowData.get('Jam Perkuliahan:')?.trim() ?? '?',
+        kehadiran: rowData.get('Kehadiran:')?.trim() ?? '?',
+        kelas: kls?.trim() ?? '?',
         kuliahPengganti,
       }
 
@@ -158,7 +158,10 @@ async function scrapeJadwalKehadiranTable(
 
     return daftarJadwalKehadiran
   } catch (error) {
-    console.error('Error occurred:', error)
+    console.error(
+      'Scraping error:',
+      error instanceof Error ? error.message : 'Unknown error',
+    )
     process.exit(1)
   }
 }
@@ -167,12 +170,14 @@ async function simpanAwal(
   session: string,
   jadwalKehadiran: JadwalKehadiran,
 ): Promise<void> {
-  const absenPath = jadwalKehadiran.kuliahPengganti ? 'absen_ganti' : 'absen'
-  const urlSimpanAwal = `${baseUrl}/ajar/${absenPath}/absensi_awal`
+  const absenPath = jadwalKehadiran.kuliahPengganti
+    ? ENDPOINTS.SIMPAN_AWAL_PENGGANTI
+    : ENDPOINTS.SIMPAN_AWAL
+  const urlSimpanAwal = `${BASE_URL}${absenPath}`
 
   try {
     console.info(
-      `Simpan Awal: ${urlSimpanAwal}; Mata Kuliah: ${jadwalKehadiran.mataKuliah} (${jadwalKehadiran.tp})`,
+      `Submit: ${jadwalKehadiran.mataKuliah} (${jadwalKehadiran.tp})`,
     )
 
     const data = {
@@ -186,78 +191,113 @@ async function simpanAwal(
 
     const body = new URLSearchParams(data)
 
+    await rateLimiter.throttle()
     const response = await fetch(urlSimpanAwal, {
       method: 'POST',
       body: body,
       headers: {
         Cookie: session,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': userAgent,
+        'User-Agent': USER_AGENT,
       },
     })
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    if (!response.ok) {
+      const status = response.status
+      throw new Error(`HTTP error! status: ${status}`)
+    }
   } catch (error) {
-    throw new Error(`Failed to absen ${jadwalKehadiran.mataKuliah}: ${error}`)
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    throw new Error(
+      `Failed to absen ${jadwalKehadiran.mataKuliah}: ${errorMsg}`,
+    )
   }
 }
 
-const username = Bun.env.USERNAME
-const password = Bun.env.PASSWORD
+const rawUsername = Bun.env.USERNAME
+const rawPassword = Bun.env.PASSWORD
 const absenPengganti = (Bun.env.KULIAH_PENGGANTI ?? 'true') === 'true'
 
-if (!username || !password) {
-  console.error('USERNAME and PASSWORD env variables are required')
+const credentials: LoginCredential = {
+  username: rawUsername ?? '',
+  password: rawPassword ?? '',
+}
+
+try {
+  validateCredentials(credentials)
+  console.info(
+    `Validated credentials for user: ${sanitizeForLogging(credentials.username)}`,
+  )
+} catch (error) {
+  console.error(
+    'Validation error:',
+    error instanceof Error ? error.message : 'Unknown error',
+  )
   process.exit(1)
 }
 
-const cookieString = await getSessionCookies({ username, password })
+const cookieString = await getSessionCookies(credentials)
 
-const session = cookieString.split('; ')[0]!
+const session = cookieString.split('; ')[0]
+if (!session) {
+  console.error('Failed to extract session from cookie')
+  process.exit(1)
+}
 
-const daftarJadwal = await scrapeJadwalKehadiranTable(session, '#jadwal')
+const daftarJadwal = await scrapeJadwalKehadiranTable(
+  session,
+  SELECTORS.JADWAL_TABLE,
+)
 
 if (absenPengganti) {
   const jadwalPengganti = await scrapeJadwalKehadiranTable(
     session,
-    '#jadwal',
+    SELECTORS.JADWAL_TABLE,
     true,
   )
   daftarJadwal.push(...jadwalPengganti)
 }
 
-const belumHadir = daftarJadwal.filter((j) => j.kehadiran !== 'Hadir')
+const notYetPresent = daftarJadwal.filter(
+  (j) => j.kehadiran !== KEHADIRAN_STATUS.HADIR,
+)
 
 let hasFailure = false
+const succeededKeys = new Set<string>()
 
-if (belumHadir.length > 0) {
-  const results = await Promise.allSettled(
-    belumHadir.map((j) => simpanAwal(session, j)),
+const getScheduleKey = (j: JadwalKehadiran) =>
+  `${j.kodeMataKuliah}|${j.kodeDosen}|${j.jamAwal}`
+
+if (notYetPresent.length > 0) {
+  await Promise.allSettled(
+    notYetPresent.map((j) =>
+      simpanAwal(session, j).then(
+        () => {
+          succeededKeys.add(getScheduleKey(j))
+        },
+        (error) => {
+          console.error(
+            `Submit failed for ${j.mataKuliah}:`,
+            error instanceof Error ? error.message : String(error),
+          )
+          hasFailure = true
+        },
+      ),
+    ),
   )
 
-  const succeeded = results.filter((r) => r.status === 'fulfilled')
-  const failed = results.filter((r) => r.status === 'rejected')
-
-  console.info(`Done: ${succeeded.length}/${belumHadir.length} succeeded`)
-
-  if (failed.length > 0) {
-    failed.forEach((r) => console.error(r.reason))
-    hasFailure = true
-  }
+  console.info(
+    `${succeededKeys.size}/${notYetPresent.length} submissions succeeded`,
+  )
 } else {
-  console.info('No pending attendance found')
+  console.info('No pending attendance')
 }
 
-const verification = await scrapeJadwalKehadiranTable(session, '#jadwal')
-
-if (absenPengganti) {
-  const verifikasiPengganti = await scrapeJadwalKehadiranTable(
-    session,
-    '#jadwal',
-    true,
-  )
-  verification.push(...verifikasiPengganti)
-}
+const verification = daftarJadwal.map((j) =>
+  succeededKeys.has(getScheduleKey(j))
+    ? { ...j, kehadiran: KEHADIRAN_STATUS.HADIR_NEW }
+    : j,
+)
 
 if (verification.length > 0) {
   console.table(
@@ -277,11 +317,9 @@ if (githubEvent === 'schedule') trigger = 'Scheduled Workflow'
 if (githubEvent === 'workflow_dispatch') trigger = 'Workflow Dispatch'
 
 const report = buildReportMessage({
-  mode: absenPengganti
-    ? 'Kuliah Normal + Kuliah Pengganti'
-    : 'Kuliah Normal Only',
+  mode: absenPengganti ? 'Normal + Replacement Classes' : 'Normal Classes Only',
   trigger,
-  submitted: belumHadir.length,
+  submitted: notYetPresent.length,
   hasFailure,
   jadwal: verification,
 })
