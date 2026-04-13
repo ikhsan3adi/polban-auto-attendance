@@ -62,8 +62,11 @@ export class TelegramNotifier {
   }
 
   private getAttendanceIcon(status: string): string {
-    if (status === KEHADIRAN_STATUS.HADIR_NEW) return '\u{2705} \u{1F195}'
-    if (status === KEHADIRAN_STATUS.HADIR) return '\u{2705}'
+    if (
+      status === KEHADIRAN_STATUS.HADIR_NEW ||
+      status === KEHADIRAN_STATUS.HADIR
+    )
+      return '\u{2705}'
     return '\u{274C}'
   }
 

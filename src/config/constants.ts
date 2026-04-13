@@ -9,8 +9,8 @@ export const ENDPOINTS = {
   LOGIN: '/laman/login',
   ABSEN: '/ajar/absen',
   ABSEN_PENGGANTI: '/ajar/absen_ganti',
-  SIMPAN_AWAL: '/ajar/simpan_awal',
-  SIMPAN_AWAL_PENGGANTI: '/ajar_ganti/simpan_awal',
+  SIMPAN_AWAL: '/ajar/absen/absensi_awal',
+  SIMPAN_AWAL_PENGGANTI: '/ajar/absen_ganti/absensi_awal',
 } as const
 
 export const SELECTORS = {
