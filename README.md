@@ -42,7 +42,7 @@ bun start
 
 ## Scheduled GitHub Actions
 
-The workflow runs automatically **Mon-Fri at 07:00 WIB**.
+The workflow runs automatically **Mon-Fri at 07:17 WIB**.
 
 To set it up:
 
@@ -69,10 +69,10 @@ To set it up:
 > Risks of using this tool include, but are not limited to:
 >
 > - **Absen tanpa hadir fisik** -- Dosen dapat mengecek kehadiran secara manual (absen panggil, dll). Jika tercatat "Hadir" di sistem tapi tidak hadir di kelas, kamu bisa langsung ketahuan.
-> - **Pola absen tidak wajar** -- Absen otomatis tepat jam 07:00 WIB\* setiap hari bisa terlihat mencurigakan di log server, terutama jika dosen atau admin memeriksa timestamp kehadiran.
+> - **Pola absen tidak wajar** -- Absen otomatis tepat jam 07:17 WIB\* setiap hari bisa terlihat mencurigakan di log server, terutama jika dosen atau admin memeriksa timestamp kehadiran.
 > - **Sanksi akademik** -- Pemalsuan kehadiran termasuk pelanggaran akademik yang dapat berakibat teguran, pengurangan nilai, hingga skorsing sesuai peraturan POLBAN.
 > - **Perubahan sistem** -- Website akademik dapat berubah sewaktu-waktu tanpa pemberitahuan, menyebabkan script gagal atau berperilaku tidak terduga.
 >
 > **Penulis/Developer tidak bertanggung jawab atas segala konsekuensi yang timbul dari penggunaan tool ini.**
 >
-> _\*Perlu diperhatikan bahwa jika Anda menggunakan GitHub Actions, skrip tidak akan dieksekusi secara tepat pada 07:00 WIB, tetapi sekitar 08:30-09:10 WIB karena antrian GitHub Action pada 00:00 UTC (07:00 WIB). Antrian panjang dapat menyebabkan skrip tidak dieksekusi pada waktu yang diinginkan._
+> _\*Perlu diperhatikan bahwa skrip diatur untuk dieksekusi pada 07:17 WIB (00:17 UTC) untuk menghindari antrian panjang GitHub Action yang sering terjadi pada jam bulat (seperti 07:00 WIB / 00:00 UTC)._

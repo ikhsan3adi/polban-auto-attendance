@@ -10,7 +10,7 @@
 
 - Entrypoint: `src/main.ts`
 - No test suite currently exists
-- GitHub Actions workflow runs Mon-Fri at 07:00 WIB (actual execution ~08:30-09:10 WIB due to queue)
+- GitHub Actions workflow runs Mon-Fri at 07:17 WIB (uses 00:17 UTC to avoid scheduling queue congestion)
 - Uses Bun runtime, jsdom for HTML parsing, Telegram Bot API for notifications
 
 ## Code Style
